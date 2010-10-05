@@ -95,8 +95,8 @@ class RadioForwarderHttpHandler(
                                 break
                         else:
                             time.sleep(self.params.no_data_delay)
-                except ValueError:
-                    self.send_error(500)
+                except (ValueError,urllib2.URLError,urllib2.HTTPError):
+                    self.send_error(404)
             else:
                 self.send_error(404)
         else:
