@@ -1,6 +1,6 @@
 
-# mirrorcast
-# Copyright 2010 Robert Grupp
+# mirrorcast - mirrorcast.py
+# Copyright 2010 Robert Grupp (robert.grupp@gmail.com)
 
 # This file is part of mirrorcast.
 # 
@@ -24,6 +24,11 @@ import urllib
 import sys
 import time
 import functools
+import ConfigParser
+
+# TODO:
+# - Add ability to send HTTP server debug to log file
+# - Support x-audiocast-udpport
 
 class MirrorCastParams(object):
     def __init__(self):
@@ -32,6 +37,20 @@ class MirrorCastParams(object):
         self.chunk_size = 64 * 1024 # 64 K
         self.no_data_delay = 0.05 # 50 ms
         object.__init__(self)
+
+def ReadMirrorCastParams(path):
+    parser = ConfigParser.SafeConfigParser()
+    params = MirrorCastParams()
+    kPARAMS_SECTION = 'mirrorcast'
+    try:
+        parser.read(path)
+        params.port = parser.getint(kPARAMS_SECTION,'port')
+        params.mirror_action = parser.get(kPARAMS_SECTION,'mirror_action')
+        params.chunk_size = parser.getint(kPARAMS_SECTION,'chunk_size')
+        params.no_data_delay = parser.getfloat(kPARAMS_SECTION,'no_data_delay')
+    except:
+        params = None
+    return params
 
 class RadioForwarderHttpHandler(
                       BaseHTTPServer.BaseHTTPRequestHandler):
@@ -117,11 +136,21 @@ class RadioHTTPServer(ThreadedHTTPServer):
                                      self.params))
 
 def main_fn():
-    try:
-        # TODO: load params from an ini
-        RadioHTTPServer(MirrorCastParams()).serve_forever()
-    except KeyboardInterrupt:
-        pass
+    if len(sys.argv) >= 2:
+        params = ReadMirrorCastParams(sys.argv[1])
+        if params:
+            try:
+                RadioHTTPServer(params).serve_forever()
+            except KeyboardInterrupt:
+                pass
+        else:
+            sys.stderr.write('Error initializing from ini file\n')
+            sys.exit(2)
+    else:
+        sys.stderr.write('Usage: %s <path to param ini file>\n'
+                         % sys.argv[0])
+        sys.exit(1)
+    sys.exit(0)
 
 if __name__ == '__main__':
    main_fn()
